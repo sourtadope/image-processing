@@ -1,0 +1,80 @@
+Image Restoration and Denoising - Lab 9 Report
+================================================
+
+
+Mean Filters
+------------
+
+Starting with the basic box/mean filter, it works by averaging all the pixels in the window
+which does reduce noise but at the cost of making the image look blurry. The bigger the window
+the more blur you get. A 3x3 window gives mild smoothing while a 7x7 window makes the image
+noticeably soft. It works okay for Gaussian noise but it is not great for salt and pepper
+because it just spreads the white and black pixels around instead of removing them.
+
+The geometric mean filter behaves similarly to the arithmetic mean but it tends to preserve a
+bit more detail and sharpness. The smoothing effect is still there but it feels less aggressive.
+One problem I noticed is that it does not handle pepper noise well at all because zero-valued
+pixels break the formula, so I had to add a small epsilon value to avoid getting log(0) errors.
+
+The harmonic mean filter is interesting because it specifically handles salt noise well. When I
+tested it with salt-only noise the results were clearly better than the regular mean filter.
+However when there is pepper noise (zero pixels) in the image it completely fails because
+dividing by zero ruins the output. This makes it a specialized filter rather than a general
+purpose one.
+
+The contraharmonic mean filter is the most flexible of the mean filters because the Q parameter
+lets you control what kind of noise to remove. When I used Q=+2 it removed pepper noise
+effectively and when I used Q=-2 it removed salt noise. Using the wrong sign of Q makes things
+worse which I confirmed during testing. At Q=0 it just behaves like the arithmetic mean.
+
+
+Order Statistic Filters
+-----------------------
+
+The median filter was clearly the best performing filter for salt and pepper noise. Unlike the
+mean filters it does not blur the image much because it picks an actual pixel value from the
+neighborhood instead of computing an average. For the 0.1 probability case the 3x3 median
+filter cleaned up the image almost perfectly. For 0.2 probability I had to go up to 5x5 or use
+4 iterations of the 3x3 filter to get a good result. The iterative approach was interesting
+because each pass removes more noise without making the image as blurry as just using a large
+single window.
+
+The max filter only does one thing well which is removing pepper noise. When I applied it to an
+image with only black noise pixels the result was clean. But it makes the image look brighter
+overall and slightly bloated because bright regions expand into darker ones. It is completely
+useless for salt noise.
+
+The min filter is the opposite - it removes salt (white) noise by replacing each pixel with the
+darkest value in the window. The image gets a bit darker overall and fine bright details tend to
+disappear. Just like the max filter it is only useful when you know exactly what type of noise
+you are dealing with.
+
+The midpoint filter takes the average of the max and min of each patch. It sounds like it would
+be affected by outliers but it actually works reasonably well for Gaussian and uniform noise
+since those distributions are symmetric. For salt and pepper noise it is terrible because the
+max and min values are exactly the noise pixels, so the output is dominated by them.
+
+The alpha-trimmed mean filter was the most useful for mixed noise scenarios. In task 2.8 where
+the image had both Gaussian noise and salt and pepper noise, this filter outperformed all
+others. By trimming the extreme values and averaging the rest it handles both noise types at
+once. From my tests with d values of 4, 6, 8, 10, 12, 14 and 16 using a 7x7 window, somewhere
+around d=10 to d=12 gave the best balance - lower values did not remove enough salt and pepper
+while higher values started making the image too blurry.
+
+
+General Observations
+--------------------
+
+A pattern I noticed across all tasks is that there is always a tradeoff between noise removal
+and sharpness. Every filter that reduces noise also reduces some amount of detail. The filters
+that preserve edges the best are the median and the order statistic filters in general, while
+the mean-based filters tend to blur more aggressively as window size increases.
+
+Choosing the wrong filter for the noise type can make things worse rather than better. The
+clearest example was using the harmonic mean on pepper noise or using the wrong Q value in the
+contraharmonic filter - both produced worse results than doing nothing.
+
+Window size matters a lot. For light noise a 3x3 window is usually enough. For heavier noise
+you either need a larger window or multiple iterations. Multiple iterations of a small window
+often gave better looking results than one pass with a large window because the image stayed
+sharper.
